@@ -1,17 +1,17 @@
 package com.example.gerencia_veiculos.rest;
 
 import com.example.gerencia_veiculos.domain.Veiculo;
-import com.example.gerencia_veiculos.exception.VeiculoNaoEncontradoException;
+import com.example.gerencia_veiculos.domain.dto.VeiculoFiltro;
 import com.example.gerencia_veiculos.repository.VeiculoRepository;
+import com.example.gerencia_veiculos.repository.specification.VeiculoSpecifications;
 import jakarta.validation.Valid;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
-import java.math.BigDecimal;
 import java.net.URI;
 import java.util.List;
-import java.util.Optional;
 
 @RestController
 public class GerenciaVeiculosController {
@@ -22,27 +22,17 @@ public class GerenciaVeiculosController {
     }
 
     @GetMapping(path = "/veiculos")
-    public List<Veiculo> getVeiculos() {
-        return repository.findAll();
-    }
-
-    @GetMapping(path = "/veiculos?marca={marca}&ano={ano}&cor={cor}")
-    public void getVeiculoPorParametro(@PathVariable String marca, @PathVariable Integer ano, @PathVariable String cor) {
-        //TODO  - Retorna todos os veiculos de acordo com os parâmetros passados
-    }
-
-    @GetMapping(path = "/veiculos?minPreco={valorMinimo}&maxPreco={valorMaximo}")
-    public void getVeiculosPorPreco(@PathVariable BigDecimal valorMinimo, @PathVariable BigDecimal valorMaximo) {
-        //TODO  - Retorna todos os veículos de acordo com o range de preço
+    public ResponseEntity<List<Veiculo>> getVeiculos(VeiculoFiltro filtro) {
+        Specification<Veiculo> spec = VeiculoSpecifications.filtrar(filtro);
+        List<Veiculo> veiculos = repository.findAll(spec);
+        return ResponseEntity.ok(veiculos);
     }
 
     @GetMapping(path = "/veiculos/{id}")
-    public Optional<Veiculo> getVeiculo(@PathVariable Long id) {
-        Optional<Veiculo> veiculo = repository.findById(id);
-
-        if (veiculo.isEmpty())
-            throw new VeiculoNaoEncontradoException("id:"+id);
-        return veiculo;
+    public ResponseEntity<Veiculo> getVeiculo(@PathVariable Long id) {
+        return repository.findById(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @PostMapping(path = "/veiculos")
@@ -56,13 +46,29 @@ public class GerenciaVeiculosController {
     }
 
     @PutMapping(path = "/veiculos/{id}")
-    public void atualizaVeiculo(@PathVariable Long id) {
-        //TODO  - Atualiza os dados de um veículo
+    public ResponseEntity<Veiculo> atualizaVeiculo(@PathVariable Long id, @Valid @RequestBody Veiculo veiculoNovosDados) {
+        return repository.findById(id)
+                .map(veiculoExistente -> {
+                    veiculoNovosDados.setId(id);
+                    Veiculo atualizado = repository.save(veiculoNovosDados);
+                    return ResponseEntity.ok(atualizado);
+                })
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @PatchMapping(path = "/veiculos/{id}")
-    public void atualizaDadosVeiculo(@PathVariable Long id) {
-        //TODO  - Atualiza parciamente os dados de um veículo
+    public ResponseEntity<Veiculo> atualizaDadosVeiculo(@PathVariable Long id, @RequestBody Veiculo veiculoPatch) {
+        return repository.findById(id)
+                .map(veiculoExistente -> {
+                    if (veiculoPatch.getMarca() != null) veiculoExistente.setMarca(veiculoPatch.getMarca());
+                    if (veiculoPatch.getAno() != null) veiculoExistente.setAno(veiculoPatch.getAno());
+                    if (veiculoPatch.getCor() != null) veiculoExistente.setCor(veiculoPatch.getCor());
+                    if (veiculoPatch.getPreco() != null) veiculoExistente.setPreco(veiculoPatch.getPreco());
+
+                    Veiculo atualizado = repository.save(veiculoExistente);
+                    return ResponseEntity.ok(atualizado);
+                })
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @DeleteMapping(path = "/veiculos/{id}")
@@ -70,8 +76,4 @@ public class GerenciaVeiculosController {
         repository.deleteById(id);
     }
 
-    @GetMapping(path = "/veiculos/relatorios/por-marca")
-    public void getVeiculoPorMarca() {
-        //TODO  - Retorna relatório de quantidade de veículos agrupados por marca
-    }
 }
