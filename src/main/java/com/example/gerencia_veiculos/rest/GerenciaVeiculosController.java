@@ -1,11 +1,14 @@
 package com.example.gerencia_veiculos.rest;
 
 import com.example.gerencia_veiculos.domain.Veiculo;
+import com.example.gerencia_veiculos.domain.dto.MarcaRelatorioDTO;
 import com.example.gerencia_veiculos.domain.dto.VeiculoFiltro;
 import com.example.gerencia_veiculos.repository.VeiculoRepository;
-import com.example.gerencia_veiculos.repository.specification.VeiculoSpecifications;
+import com.example.gerencia_veiculos.service.VeiculoService;
 import jakarta.validation.Valid;
-import org.springframework.data.jpa.domain.Specification;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
@@ -15,65 +18,61 @@ import java.util.List;
 
 @RestController
 public class GerenciaVeiculosController {
-    private VeiculoRepository repository;
 
-    public GerenciaVeiculosController(VeiculoRepository repository) {
+    private final VeiculoService service;
+    private final VeiculoRepository repository;
+
+    public GerenciaVeiculosController(VeiculoService service, VeiculoRepository repository) {
+        this.service = service;
         this.repository = repository;
     }
 
-    @GetMapping(path = "/veiculos")
-    public ResponseEntity<List<Veiculo>> getVeiculos(VeiculoFiltro filtro) {
-        Specification<Veiculo> spec = VeiculoSpecifications.filtrar(filtro);
-        List<Veiculo> veiculos = repository.findAll(spec);
-        return ResponseEntity.ok(veiculos);
+    @GetMapping("/veiculos")
+    public ResponseEntity<Page<Veiculo>> getVeiculos(
+            VeiculoFiltro filtro,
+            @PageableDefault(sort = "id") Pageable pageable) {
+        return ResponseEntity.ok(service.getVeiculos(filtro, pageable));
     }
 
-    @GetMapping(path = "/veiculos/{id}")
+    @GetMapping("/veiculos/{id}")
     public ResponseEntity<Veiculo> getVeiculo(@PathVariable Long id) {
         return repository.findById(id)
                 .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
-    @PostMapping(path = "/veiculos")
+    @PostMapping("/veiculos")
     public ResponseEntity<Veiculo> incluiVeiculo(@Valid @RequestBody Veiculo veiculo) {
-        Veiculo veiculoIncluido = repository.save(veiculo);
-        URI location = ServletUriComponentsBuilder.fromCurrentRequest()
-                .path("/{id}")
-                .buildAndExpand(veiculoIncluido.getId())
-                .toUri();
-        return ResponseEntity.created(location).build();
+        Veiculo salvo = service.salvar(veiculo);
+        return ResponseEntity.created(getLocation(salvo)).body(salvo);
     }
 
-    @PutMapping(path = "/veiculos/{id}")
-    public ResponseEntity<Veiculo> atualizaVeiculo(@PathVariable Long id, @Valid @RequestBody Veiculo veiculoNovosDados) {
-        return repository.findById(id)
-                .map(veiculoExistente -> {
-                    veiculoNovosDados.setId(id);
-                    Veiculo atualizado = repository.save(veiculoNovosDados);
-                    return ResponseEntity.ok(atualizado);
-                })
-                .orElse(ResponseEntity.notFound().build());
+    @PutMapping("/veiculos/{id}")
+    public ResponseEntity<Veiculo> atualizaVeiculo(@PathVariable Long id, @Valid @RequestBody Veiculo novosDados) {
+        return ResponseEntity.ok(service.atualizarTotal(id, novosDados));
     }
 
-    @PatchMapping(path = "/veiculos/{id}")
+    @PatchMapping("/veiculos/{id}")
     public ResponseEntity<Veiculo> atualizaDadosVeiculo(@PathVariable Long id, @RequestBody Veiculo veiculoPatch) {
-        return repository.findById(id)
-                .map(veiculoExistente -> {
-                    if (veiculoPatch.getMarca() != null) veiculoExistente.setMarca(veiculoPatch.getMarca());
-                    if (veiculoPatch.getAno() != null) veiculoExistente.setAno(veiculoPatch.getAno());
-                    if (veiculoPatch.getCor() != null) veiculoExistente.setCor(veiculoPatch.getCor());
-                    if (veiculoPatch.getPreco() != null) veiculoExistente.setPreco(veiculoPatch.getPreco());
-
-                    Veiculo atualizado = repository.save(veiculoExistente);
-                    return ResponseEntity.ok(atualizado);
-                })
-                .orElse(ResponseEntity.notFound().build());
+        return ResponseEntity.ok(service.atualizarParcial(id, veiculoPatch));
     }
 
-    @DeleteMapping(path = "/veiculos/{id}")
-    public void removeVeiculo(@PathVariable Long id) {
-        repository.deleteById(id);
+    @DeleteMapping("/veiculos/{id}")
+    public ResponseEntity<Void> removeVeiculo(@PathVariable Long id) {
+        service.remover(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/veiculos/relatorios/por-marca")
+    public ResponseEntity<List<MarcaRelatorioDTO>> getRelatorioPorMarca() {
+        return ResponseEntity.ok(repository.countVeiculosByMarca());
+    }
+
+    private URI getLocation(Veiculo salvo) {
+        return ServletUriComponentsBuilder.fromCurrentRequest()
+                .path("/{id}")
+                .buildAndExpand(salvo.getId())
+                .toUri();
     }
 
 }

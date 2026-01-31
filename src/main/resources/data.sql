@@ -1,8 +1,11 @@
-insert into veiculos (id, marca, ano, cor, preco)
-values (1001, 'byd', 2023, 'preto', 35000);
+INSERT INTO veiculos (placa, marca, cor, ano, preco_usd, ativo)
+VALUES ('UNO-9999', 'Fiat', 'Branco', 2013, 3500.00, true);
 
-insert into veiculos (id, marca, ano, cor, preco)
-values (1002, 'honda', 2024, 'branco', 90000);
+INSERT INTO veiculos (placa, marca, cor, ano, preco_usd, ativo)
+VALUES ('MAREA-007', 'Fiat', 'Cinza', 2005, 2500.00, true);
 
-insert into veiculos (id, marca, ano, cor, preco)
-values (1003, 'toyota', 2022, 'cinza', 40000);
+INSERT INTO veiculos (placa, marca, cor, ano, preco_usd, ativo)
+VALUES ('SAV-2024', 'Volkswagen', 'Vermelho', 2024, 18500.00, true);
+
+INSERT INTO veiculos (placa, marca, cor, ano, preco_usd, ativo)
+VALUES ('GOL-1000', 'Volkswagen', 'Prata', 2010, 4200.00, true);

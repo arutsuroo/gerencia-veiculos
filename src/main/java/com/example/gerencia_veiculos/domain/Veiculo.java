@@ -1,29 +1,35 @@
 package com.example.gerencia_veiculos.domain;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.Id;
-import jakarta.validation.constraints.Size;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
+import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
+import org.hibernate.annotations.SoftDelete;
+import org.hibernate.annotations.SoftDeleteType;
 import java.math.BigDecimal;
 
-@Entity(name = "veiculos")
-@Data
-@NoArgsConstructor
+@Entity
+@Table(name = "veiculos")
+@SoftDelete(columnName = "ativo", strategy = SoftDeleteType.ACTIVE)
+@Getter
+@Setter
 public class Veiculo {
 
     @Id
-    @GeneratedValue
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Size(min = 2, message = "A marca precisa ter no mínimo dois caracteres")
+    @Column(unique = true, nullable = false)
+    private String placa;
+
     private String marca;
-
     private Integer ano;
-
-    @Size(min = 2, message = "A cor precisa ter no mínimo dois caracteres")
     private String cor;
-    private BigDecimal preco;
+
+    private BigDecimal precoUsd;
+
+    @Transient
+    private BigDecimal precoBrl;
+
+    @Column(name = "ativo", insertable = false, updatable = false)
+    private boolean ativo = true;
 }
